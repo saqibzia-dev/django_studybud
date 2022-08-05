@@ -8,6 +8,14 @@
 </head>
 <body>
     {%include 'nav.html'%}
+    {% if messages %}
+        {% for message in messages %}
+            <ul class = "messages">
+                <li>{{message}}</li>
+            </ul>
+
+        {% endfor %}
+    {% endif %}
     {% block content %}
 
     {% endblock %}

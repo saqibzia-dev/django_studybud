@@ -18,7 +18,9 @@ class Room(models.Model):
     created_at = models.DateTimeField(auto_now_add = True)
     updated_at = models.DateTimeField(auto_now = True)
 
-
+    #for ordering in descending order
+    class Meta():
+        ordering = ["-updated_at","-created_at"]
     def __str__(self):
         return self.name
 
