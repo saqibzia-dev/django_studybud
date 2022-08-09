@@ -1,12 +1,13 @@
 from django.shortcuts import render,redirect
 from django.http import HttpResponse
-from .models import Room,Topic
+from .models import Message, Room,Topic
 from .forms import RoomForm
 from django.db.models import Q
 from django.contrib.auth.models import User
 from django.contrib import messages
 from django.contrib.auth import authenticate,login,logout
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.forms import UserCreationForm
 
 
 # rooms = [
@@ -27,28 +28,52 @@ def home(request):
     # rooms = Room.objects.all()
     room_count = rooms.count()
     topics = Topic.objects.all()
-    context  = {'rooms':rooms,'topics':topics,'room_count':room_count}
+    room_messages = Message.objects.filter(Q(room__topic__name__icontains = q))
+    context  = {'rooms':rooms,'topics':topics,'room_count':room_count,'room_messages':room_messages}
     return render(request,'base/home.html',context)
+
+def user_profile(request,pk):
+    user = User.objects.get(id = pk)
+    rooms = user.room_set.all()
+    room_messages = user.message_set.all()
+    topics = Topic.objects.all()
+    context = {'user':user,'rooms':rooms,'room_messages':room_messages,'topics':topics}
+    return render(request,'base/profile.html',context)
 
 def room(request,pk):
     # return HttpResponse("Room")
     room = Room.objects.get(id = pk)
+    room_messages = room.message_set.all().order_by('-created_at')
+    participants = room.participants.all()
+    if request.method == 'POST':
+        message = Message.objects.create(
+            user = request.user,
+            room = room,
+            body = request.POST.get('body'),
+        )
+        room.participants.add(request.user)
+        return redirect('room',pk = room.id)
+
+
     # room = None
     # for item in rooms:
         
     #     if item['id'] == int(pk):
-    #         room = item 
-    context = {'room':room}        
+    #         room = item
+     
+    context = {'room':room,'room_messages':room_messages,'participants':participants}        
     return render(request,'base/room.html',context)
 
 @login_required(login_url = 'login')
 def create_room(request):
     form = RoomForm()
     if request.method == 'POST':
-        print(request.POST)
+        # print(request.POST)
         form = RoomForm(request.POST)
         if form.is_valid():
-            form.save() 
+            room = form.save(commit = False)
+            room.host = request.user
+            room.save() 
             return redirect('home')
     context = {'form':form}
     return render(request,'base/room_form.html',context)
@@ -86,7 +111,7 @@ def login_page(request):
     if request.user.is_authenticated:
         return redirect('home')
     if request.method == 'POST':
-        username = request.POST.get('username')
+        username = request.POST.get('username').lower()
         password = request.POST.get('password')
         try:
             user = User.objects.get(username = username)
@@ -109,6 +134,35 @@ def logout_page(request):
 
 def register_page(request):
     page = 'register'
-    context = {'page':page}
-    
+    form = UserCreationForm()
+    if request.user.is_authenticated:
+        return redirect('home')
+    if request.method == 'POST':
+        form = UserCreationForm(request.POST)
+        if form.is_valid():
+            user = form.save(commit = False)
+            user.username = user.username.lower()
+            user.save()
+            login(request,user)
+            return redirect('home')
+    context = {'page':page,'form':form}
     return render(request,'base/login_register.html',context)
+
+@login_required(login_url = 'login' )
+def delete_message(request,pk):
+    message = Message.objects.get(id = pk)
+    print(message)
+    if request.user != message.user:
+        return HttpResponse('You are Not Allowed Here!!')
+
+    if request.method == 'POST':
+        
+        message.delete()
+        return redirect('home')
+
+    context = {'obj':message}
+    return render(request,'base/delete_data.html',context)
+
+
+    
+

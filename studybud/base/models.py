@@ -13,13 +13,14 @@ class Room(models.Model):
 
     host = models.ForeignKey(User,on_delete = models.SET_NULL,null = True)
     topic = models.ForeignKey(Topic,on_delete = models.SET_NULL,null = True)
+    participants = models.ManyToManyField(User,blank= True,related_name = 'participants')
     name = models.CharField(max_length = 200)
     description = models.TextField(null = True,blank = True)
     created_at = models.DateTimeField(auto_now_add = True)
     updated_at = models.DateTimeField(auto_now = True)
 
     #for ordering in descending order
-    class Meta():
+    class Meta:
         ordering = ["-updated_at","-created_at"]
     def __str__(self):
         return self.name
@@ -32,6 +33,8 @@ class Message(models.Model):
     created_at = models.DateTimeField(auto_now_add = True)
     updated_at = models.DateTimeField(auto_now = True)
 
+    class Meta:
+        ordering = ['-updated_at','-created_at']
     def __str__(self):
         return self.body[:50]
 
